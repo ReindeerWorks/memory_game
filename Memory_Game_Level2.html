@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Different Isn’t a Dirty Word – Memory Game (Level 2)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f7f7ff;
+      padding: 16px;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.4rem;
+      margin-bottom: 0.25rem;
+    }
+
+    p {
+      text-align: center;
+      font-size: 0.9rem;
+      margin-top: 0;
+      margin-bottom: 1rem;
+      max-width: 480px;
+    }
+
+    .game-container {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(90px, 120px)); /* 4 columns x 5 rows = 20 cards */
+      gap: 12px;
+      margin-top: 8px;
+      max-width: 520px;
+    }
+
+    .card {
+      width: 100%;
+      aspect-ratio: 3 / 4;
+      perspective: 800px;
+      cursor: pointer;
+    }
+
+    .card-inner {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.4s ease;
+      border-radius: 10px;
+    }
+
+    .card.flipped .card-inner,
+    .card.matched .card-inner {
+      transform: rotateY(180deg);
+      cursor: default;
+    }
+
+    .card-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card-front {
+      background: #ffffff;
+      border: 2px solid #b0b7ff;
+      transform: rotateY(180deg);
+    }
+
+    .card-front img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .card-back {
+      background: linear-gradient(135deg, #ffcfe8, #c5d5ff);
+      border: 2px solid #8ea5ff;
+      color: #333;
+      font-weight: bold;
+      font-size: 0.95rem;
+      letter-spacing: 0.03em;
+      text-align: center;
+      padding: 4px;
+    }
+
+    .status {
+      margin-top: 12px;
+      font-size: 0.9rem;
+      min-height: 1.5em;
+      text-align: center;
+    }
+
+    .controls {
+      margin-top: 8px;
+    }
+
+    .controls button {
+      padding: 6px 14px;
+      font-size: 0.9rem;
+      border-radius: 999px;
+      border: none;
+      background: #8ea5ff;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .controls button:hover {
+      background: #6e86f0;
+    }
+
+    @media (max-width: 600px) {
+      .game-container {
+        grid-template-columns: repeat(3, minmax(80px, 100px)); /* narrower phones: 3 columns */
+        max-width: 360px;
+      }
+      .card-back {
+        font-size: 0.85rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Different Isn’t a Dirty Word – Memory Game (Level 2)</h1>
+  <p>
+    Level 2 challenge! Tap a card to flip it over. Try to match all the different
+    Neeko, Zara, Max, and Elijah cards.
+  </p>
+
+  <div class="game-container" id="game"></div>
+
+  <div class="status" id="status"></div>
+
+  <div class="controls">
+    <button id="resetBtn">Play Again</button>
+  </div>
+
+  <script>
+    // 💾 Make sure these filenames match what you uploaded to GitHub
+    const characters = [
+      { name: "NEEKO_TENNIS",  img: "Neeko3.png"  },
+      { name: "ZARA_TENNIS",   img: "Zara3.png"   },
+      { name: "MAX_TENNIS",    img: "Max3.png"    },
+      { name: "MAX_SCOPE",     img: "Max5.png"    },
+      { name: "NEEKO_MAP",     img: "Neeko5.png"  },
+      { name: "ZARA_FLY",      img: "Zara5.png"   },
+      { name: "NEEKO_JUMP",    img: "Neeko2.png"  },
+      { name: "ZARA_BALLOONS", img: "Zara2.png"   },
+      { name: "MAX_CITY",      img: "Max2.png"    },
+      { name: "ELIJAH",        img: "Elijah.png"  }
+    ];
+
+    let deck = [];
+    const gameEl = document.getElementById("game");
+    const statusEl = document.getElementById("status");
+    const resetBtn = document.getElementById("resetBtn");
+
+    let firstCard = null;
+    let secondCard = null;
+    let lockBoard = false;
+    let matchesFound = 0;
+
+    function createDeck() {
+      const pairs = [];
+      characters.forEach(char => {
+        pairs.push({ ...char, id: char.name + "_1" });
+        pairs.push({ ...char, id: char.name + "_2" });
+      });
+      // Shuffle with Fisher-Yates
+      for (let i = pairs.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pairs[i], pairs[j]] = [pairs[j], pairs[i]];
+      }
+      deck = pairs;
+    }
+
+    function renderBoard() {
+      gameEl.innerHTML = "";
+      deck.forEach(cardData => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.dataset.name = cardData.name;
+
+        const inner = document.createElement("div");
+        inner.className = "card-inner";
+
+        const back = document.createElement("div");
+        back.className = "card-face card-back";
+        back.textContent = "Tap to Flip";
+
+        const front = document.createElement("div");
+        front.className = "card-face card-front";
+
+        const img = document.createElement("img");
+        img.src = cardData.img;
+        img.alt = cardData.name;
+        front.appendChild(img);
+
+        inner.appendChild(back);
+        inner.appendChild(front);
+        card.appendChild(inner);
+        gameEl.appendChild(card);
+
+        card.addEventListener("click", () => handleCardClick(card));
+      });
+    }
+
+    function resetGame() {
+      firstCard = null;
+      secondCard = null;
+      lockBoard = false;
+      matchesFound = 0;
+      statusEl.textContent = "";
+      createDeck();
+      renderBoard();
+    }
+
+    function handleCardClick(card) {
+      if (lockBoard) return;
+      if (card.classList.contains("flipped") || card.classList.contains("matched")) return;
+
+      card.classList.add("flipped");
+
+      if (!firstCard) {
+        firstCard = card;
+        return;
+      }
+
+      secondCard = card;
+      checkForMatch();
+    }
+
+    function checkForMatch() {
+      const isMatch = firstCard.dataset.name === secondCard.dataset.name;
+      if (isMatch) {
+        handleMatch();
+      } else {
+        handleNoMatch();
+      }
+    }
+
+    function handleMatch() {
+      firstCard.classList.add("matched");
+      secondCard.classList.add("matched");
+      firstCard = null;
+      secondCard = null;
+      matchesFound++;
+
+      if (matchesFound === characters.length) {
+        statusEl.textContent = "You matched them all! Amazing memory!";
+      } else {
+        statusEl.textContent = "Great match! Keep going!";
+      }
+    }
+
+    function handleNoMatch() {
+      lockBoard = true;
+      statusEl.textContent = "Not a match, try again!";
+      setTimeout(() => {
+        firstCard.classList.remove("flipped");
+        secondCard.classList.remove("flipped");
+        firstCard = null;
+        secondCard = null;
+        lockBoard = false;
+      }, 900);
+    }
+
+    resetBtn.addEventListener("click", resetGame);
+
+    // Start game
+    resetGame();
+  </script>
+</body>
+</html>
