@@ -31,10 +31,11 @@
 
     .game-container {
       display: grid;
-      grid-template-columns: repeat(4, minmax(90px, 120px)); /* 4 columns x 5 rows = 20 cards */
+      grid-template-columns: repeat(4, minmax(90px, 120px)); /* 4 x 5 grid = 20 cards */
       gap: 12px;
       margin-top: 8px;
       max-width: 520px;
+      justify-content: center;
     }
 
     .card {
@@ -95,33 +96,43 @@
     }
 
     .status {
-      margin-top: 12px;
-      font-size: 0.9rem;
+      margin-top: 16px;
+      font-size: 1rem;
       min-height: 1.5em;
       text-align: center;
+      color: #333;
+      font-weight: 600;
     }
 
     .controls {
-      margin-top: 8px;
+      margin-top: 12px;
     }
 
     .controls button {
-      padding: 6px 14px;
-      font-size: 0.9rem;
+      padding: 10px 22px;
+      font-size: 1rem;
       border-radius: 999px;
       border: none;
-      background: #8ea5ff;
+      background: #88d498;
       color: #fff;
       cursor: pointer;
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+      transform: scale(1);
+      transition: background 0.2s ease, transform 0.1s ease;
     }
 
     .controls button:hover {
-      background: #6e86f0;
+      background: #6fba7e;
+      transform: scale(1.03);
+    }
+
+    .controls button:active {
+      transform: scale(0.97);
     }
 
     @media (max-width: 600px) {
       .game-container {
-        grid-template-columns: repeat(3, minmax(80px, 100px)); /* narrower phones: 3 columns */
+        grid-template-columns: repeat(3, minmax(80px, 100px));
         max-width: 360px;
       }
       .card-back {
@@ -142,7 +153,7 @@
   <div class="status" id="status"></div>
 
   <div class="controls">
-    <button id="resetBtn">Play Again</button>
+    <button id="resetBtn">Play Again?</button>
   </div>
 
   <script>
@@ -176,7 +187,7 @@
         pairs.push({ ...char, id: char.name + "_1" });
         pairs.push({ ...char, id: char.name + "_2" });
       });
-      // Shuffle with Fisher-Yates
+      // Shuffle with Fisher–Yates
       for (let i = pairs.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [pairs[i], pairs[j]] = [pairs[j], pairs[i]];
@@ -223,6 +234,8 @@
       statusEl.textContent = "";
       createDeck();
       renderBoard();
+      // make sure the button always says "Play Again?"
+      resetBtn.textContent = "Play Again?";
     }
 
     function handleCardClick(card) {
@@ -257,7 +270,9 @@
       matchesFound++;
 
       if (matchesFound === characters.length) {
-        statusEl.textContent = "You matched them all! Amazing memory!";
+        statusEl.textContent = "Good job, you found them all! 🎉";
+        // Scroll status into view on mobile so she can see the message
+        statusEl.scrollIntoView({ behavior: "smooth", block: "center" });
       } else {
         statusEl.textContent = "Great match! Keep going!";
       }
